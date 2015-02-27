@@ -49,7 +49,7 @@ Mapbox is built on an open-source mapmaking library, Leaflet.js. Mapbox builds o
 
 <p>Most importantly, creating a static map using Mapbox is dead simple- in fact, you can add a basic map to any page by including an iframe, like so:</p>
 
-<p><code>&lt;iframe width='100%' height='500px' frameBorder='0' src='https://api.tiles.mapbox.com/v4/mapbox.streets.html?access_token=&lt;public access token goes here&gt;'&lt;/iframe&gt;</code></p>
+<p><code>&lt;iframe width='100%' height='500px' frameBorder='0' src='https://api.tiles.mapbox.com/v4/mapbox.streets.html?access_token="&lt;public access token goes here&gt;"'&lt;/iframe&gt;</code></p>
 <iframe width='100%' height='500px' frameBorder='0' src='https://api.tiles.mapbox.com/v4/mapbox.streets.html?access_token="pk.eyJ1IjoibGNocmlzdGFraXMiLCJhIjoiNG5JSEdXdyJ9.4MZ2AheCwUXtAdk6GHPTsQ"'></iframe>
 <p>In this guide I'll walk through building a simple map that uses jquery and Mapbox.js to display median ages for different counties in a particular state. The older the residents of a particular county, the darker that county will be shaded. Some of the code in this how to is based on files found at <a href="https://www.mapbox.com/mapbox.js/example/v1.0.0/">https://www.mapbox.com/mapbox.js/example/v1.0.0/</a></p>
 
@@ -61,13 +61,13 @@ Mapbox is built on an open-source mapmaking library, Leaflet.js. Mapbox builds o
 
 <p>By searching the Census Reporter Explorer for the keyword 'Age', I'm able to find and view Table B01002: Median Age by Sex.
 <img src="http://web.engr.oregonstate.edu/%7Echristlu/map-howto-files/howto1.png" alt="Finding census data">
-I then tell the website that I want a county-level summary view...
+<br>I then tell the website that I want a county-level summary view...
 <img src="http://web.engr.oregonstate.edu/%7Echristlu/map-howto-files/howto2.png" alt="County-level summary">
-And limit my view to Florida.
+<br>And limit my view to Florida.
 <img src="http://web.engr.oregonstate.edu/%7Echristlu/map-howto-files/howto3.png" alt="Limit data to Florida">
-From here I can download the data in several formats. We'll need to get both the geoJSON and CSV formats for our map.
+<br>From here I can download the data in several formats. We'll need to get both the geoJSON and CSV formats for our map.
 <img src="http://web.engr.oregonstate.edu/%7Echristlu/map-howto-files/howto4.png" alt="Viewing and downloading the data"> </p>
-
+<br>
 <p>We can also view the census map that correlates to this table. Our initial map will behave similarly to this census map; we'll use the geoJSON file from the census to draw an overlay for each county and then colorize it based on the median ages provided in the CSV file. Before we can do so we need to convert the CSV file into a JSON file that can be handled by jQuery. Fortunately there is a simple free tool for making this conversion; we just need to visit shancarter.github.io/mr-data-converter/ and copy the contents of the CSV into the input box:</p>
 
 <p>And then copy the contents of the output box into a text editor and save it as a json file- here, I've named it censusdata.json, and I've renamed the geojson file to fl.geojson.</p>
