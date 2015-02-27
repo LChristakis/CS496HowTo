@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Cs496howto : How To Create Choropleth Maps in Mapbox using jQuery">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Cs496howto</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/LChristakis/CS496HowTo">View on GitHub</a>
+
+          <h1 id="project_title">Cs496howto</h1>
+          <h2 id="project_tagline">How To Create Choropleth Maps in Mapbox using jQuery</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/LChristakis/CS496HowTo/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/LChristakis/CS496HowTo/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p>Maps provide an important and useful way to display and describe all kinds of location-specific data. As someone interested in developing for news and journalism, I decided to write a how-to on building interactive data-driven maps for the web and mobile using some of the tools I've found. This website walks through the basics of building such a map- getting the data we need and then using it to build a map in jQuery.</p>
+
+<p>After researching some of the mapping tools that exist, I decided to use MapBox for this tutorial. Why?</p>
+
+<ul>
+<li>
+<strong>It's cross-platform</strong>
+Mapbox works on all major desktop and mobile web browsers and can be embedded in Android and iOS.</li>
+<li>
+<strong>It provides robust tools</strong>
+The Mapbox APIs, mobile SDKs and map design tools make it easy to develop a custom map.</li>
+<li>
+<strong>It's built on open source</strong>
+Mapbox is built on an open-source mapmaking library, Leaflet.js. Mapbox builds on Leaflet by hosting customizable Mapbox tiles. The Mapbox SDKs and API are all open source, making them easier to understand and modify as necessary.</li>
+</ul>
+
+<p>Most importantly, creating a static map using Mapbox is dead simple- in fact, you can add a basic map to any page by including an iframe, like so:</p>
+
+<p><code>&lt;iframe width='100%' height='500px' frameBorder='0' src='https://api.tiles.mapbox.com/v4/mapbox.streets.html?access_token=&lt;public access token goes here&gt;'&lt;/iframe&gt;</code></p>
+
+<p>In this guide I'll walk through building a simple map that uses jquery and Mapbox.js to display median ages for different counties in a particular state. The older the residents of a particular county, the darker that county will be shaded. Some of the code in this how to is based on files found at <a href="https://www.mapbox.com/mapbox.js/example/v1.0.0/">https://www.mapbox.com/mapbox.js/example/v1.0.0/</a></p>
+
+<p>Prerequisites:
+-A web host for the required files
+-An account with Mapbox</p>
+
+<p>Before we begin building the map, we need to retrieve the data we wish to display. For this example I'll be using data from the US Census website, censusreporter.gov. I've included the required files at the bottom of this page, but understanding how to navigate the Census Website is good to know. The census website includes quite a bit of interesting data and some very well made maps; we'll see how we can make similar maps shortly.</p>
+
+<p>By searching the Census Reporter Explorer for the keyword 'Age', I'm able to find and view Table B01002: Median Age by Sex.
+<img src="http://web.engr.oregonstate.edu/%7Echristlu/map-howto-files/howto1.png" alt="Finding census data">
+I then tell the website that I want a county-level summary view...
+<img src="http://web.engr.oregonstate.edu/%7Echristlu/map-howto-files/howto2.png" alt="County-level summary">
+And limit my view to Florida.
+<img src="http://web.engr.oregonstate.edu/%7Echristlu/map-howto-files/howto3.png" alt="Limit data to Florida">
+From here I can download the data in several formats. We'll need to get both the geoJSON and CSV formats for our map.
+<img src="http://web.engr.oregonstate.edu/%7Echristlu/map-howto-files/howto4.png" alt="Viewing and downloading the data"> </p>
+
+<p>We can also view the census map that correlates to this table. Our initial map will behave similarly to this census map; we'll use the geoJSON file from the census to draw an overlay for each county and then colorize it based on the median ages provided in the CSV file. Before we can do so we need to convert the CSV file into a JSON file that can be handled by jQuery. Fortunately there is a simple free tool for making this conversion; we just need to visit shancarter.github.io/mr-data-converter/ and copy the contents of the CSV into the input box:</p>
+
+<p>And then copy the contents of the output box into a text editor and save it as a json file- here, I've named it censusdata.json, and I've renamed the geojson file to fl.geojson.</p>
+
+<p>Now we can begin developing our map. We'll start with a basic HTML page:</p>
+
+<pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+    &lt;head&gt;
+        &lt;meta charset=utf-8 /&gt;
+        &lt;title&gt;Median Ages in Florida Counties&lt;/title&gt;
+        &lt;meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' /&gt;
+        &lt;script src='https://api.tiles.mapbox.com/mapbox.js/v2.1.5/mapbox.js'&gt;&lt;/script&gt;
+        &lt;link href='https://api.tiles.mapbox.com/mapbox.js/v2.1.5/mapbox.css' rel='stylesheet' /&gt;
+        &lt;style&gt;
+            body { margin:0; padding:0; }
+            #map { position:absolute; top:0; bottom:0; width:100%; }
+        &lt;/style&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+        &lt;div id='map'&gt;&lt;/div&gt;
+        &lt;script&gt;
+            L.mapbox.accessToken = 'pk.eyJ1IjoibGNocmlzdGFraXMiLCJhIjoiNG5JSEdXdyJ9.4MZ2AheCwUXtAdk6GHPTsQ';
+            var map = L.mapbox.map('map', 'examples.map-h67hf2ic')
+            .setView([28,-84],7);
+            map.attributionControl.addAttribution('Data from ' +
+            '&lt;a href="http://censusreporter.org/data/map/?table=B01002&amp;geo_ids=050|04000US12"&gt;' +
+            'Census Reporter&lt;/a&gt;. Map based on' + 
+            '&lt;a href="https://www.mapbox.com/mapbox.js/example/v1.0.0/' + 
+            'choropleth-joined-data-multiple-variables/"&gt;Mapbox Example&lt;/a&gt;');
+        &lt;/script&gt;
+    &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+
+<p>Some notes about this page:</p>
+
+<ul>
+<li>We use a  tag to prevent the user from changing the size of the page (mapbox will handle zooming in and out for us.) </li>
+<li>We also include the mapbox.js script and css in the header, as well as jQuery, which we'll need later on. </li>
+<li><p>There's also some basic styling which ensures that the map will fill the whole page:
+<code>body { margin:0; padding:0; }</code>
+<code>#map { position:absolute; top:0; bottom:0; width:100%; }</code></p></li>
+<li>
+<p>In the body we add an empty </p>
+<div> with the id 'map', followed by some javascript which will load the map into the div:
+L.mapbox.accessToken = 'your public key';
+var map = L.mapbox.map('map','examples.map-h67hf2ic')
+.setView([40,-96],4);
+In the first line, we create a mapbox object L.mapbox, and set its access token. In the second, we tell the object to create and configure a map, which will be stored in the variable named 'map'. Let's take a closer look at the function in the second line, <code>L.mapbox.map('element','id')</code>
+*'element' is the name of the DOM object id we want to place the map in. In our example we want to put the map in the <div> identified as 'map'.
+*'id' is the project id of the mapbox map we wish to use. In our example we use one of the example maps provided by Mapbox, but you can just as easily create a custom map on <a href="https://www.mapbox.com/projects/">https://www.mapbox.com/projects/</a> and use that
+
+
+<p>We then append a call <code>.setView()</code> on the object. Our call to <code>setView()</code> centers the map on the coordinates <code>28,-84</code> and sets the zoom level to <code>7</code>. Finally, we add some attribution details, acknowledging where our map and data have come from.</p>
+
+<p>If we save this file to our web server and open it, we now have a very nice (if very plain) map, focused on Florida. It's time to start adding our data. First, upload <code>fl.geojson</code> and <code>flcensusdata.json</code> to the same directory as the html file. Next, we'll begin modifying the script within the body our html file.</p>
+
+<p>First, we'll add add a new feature layer to the map, to outline every county in the data set. This is accomplished by creating a new mapbox featureLayer object (L.mapox.featureLayer()), loading our geojson data into it (loadURL('FL.geojson')) and adding it to our existing map (.addTo(map)). When finished, our script looks like this:</p>
+
+<pre><code>L.mapbox.accessToken = 'pk.eyJ1IjoibGNocmlzdGFraXMiLCJhIjoiNG5JSEdXdyJ9.4MZ2AheCwUXtAdk6GHPTsQ';
+var map = L.mapbox.map('map', 'examples.map-h67hf2ic')
+.setView([28,-84],7);
+map.attributionControl.addAttribution('Data from ' +
+'&lt;a href="http://censusreporter.org/data/map/?table=B01002&amp;geo_ids=050|04000US12"&gt;' +
+'Census Reporter&lt;/a&gt;. Map based on &lt;a href="https://www.mapbox.com/mapbox.js/example/v1.0.0/' + 
+'choropleth-joined-data-multiple-variables/"&gt;Mapbox Example&lt;/a&gt;');
+
+var flLayer = L.mapbox.featureLayer()
+    .loadURL('FL.geojson')
+    .addTo(map);
+</code></pre>
+
+<p>If we save this and look at our map now, every county is outlined. But they're all gray! We need to load the actual data in order to colorize the map. First, we'll tell the script to run another function once flLayer is ready. We do this by adding a call to <code>loadData()</code> right after <code>.addTo()</code>, like so:</p>
+
+<pre><code>var flLayer = L.mapbox.featureLayer()
+    .loadURL('FL.geojson')
+    .addTo(map)
+    .on('ready',loadData);
+</code></pre>
+
+<p>Then, we'll define the <code>loadData</code> function. This function loads the census data stored in <code>flcensusdata.json</code>. Once the data is done loading it calls <code>joinData</code> function to add this data to <code>flLayer</code>.</p>
+
+<pre><code>function loadData() {
+    $.getJSON('flcensusdata.json')
+        .done(function(data) {
+            joinData(data, flLayer);
+        });
+}
+</code></pre>
+
+<p>In <code>joinData</code>, we pair each geoJSON county with the JSON data for that county's median age for the total population:</p>
+
+<pre><code>var ranges = {};
+ranges['B01002001 - Total:'] = {min:Infinity,max:-Infinity};
+
+function joinData(data, layer) {
+    var flGeoJSON = flLayer.toGeoJSON(),
+        byCounty = {};
+    // Rearrange it so that instead of being a big array,
+    // it's an object that is indexed by the state name,
+    // that we'll use to join on.
+    for (var i = 0; i &lt; flGeoJSON.features.length; i++) {
+        byCounty[flGeoJSON.features[i].properties.name] =
+            flGeoJSON.features[i];
+    }
+    for (i = 0; i &lt; data.length; i++) {
+        // Match the GeoJSON data (byCounty) with the tabular data
+        // (data), replacing the GeoJSON feature properties
+        // with the full data.
+        byCounty[data[i].name].properties = data[i];
+    //build the table of min and max values for B01002001 - Total:
+        ranges['B01002001 - Total:'].min = Math.min(data[i]['B01002001 - Total:'], ranges['B01002001 - Total:'].min);
+        ranges['B01002001 - Total:'].max = Math.max(data[i]['B01002001 - Total:'], ranges['B01002001 - Total:'].max);
+    }
+    // Create a new GeoJSON array of features and set it
+    // as the new flLayer content.
+    var newFeatures = [];
+    for (i in byCounty) {
+        newFeatures.push(byCounty[i]);
+    }
+    flLayer.setGeoJSON(newFeatures);
+    // Kick off by filtering on an attribute.
+    setVariable(variables[0]);
+}
+</code></pre>
+
+<p>Before we call the function, we must set up a global variable <code>ranges</code> and set the starting values for our range (note that the min starts at impossibly high, and the max starts at impossibly low.) Upon calling the function we begin by joining our geoJSON data and an empty <code>byCounty</code> object. We then store each geoJSON location in the byCounty object according to its name.  At this point, byCounty contains a series of names and features. Next, we find each county name in data, and replace the feature information with the corresponding properties from the JSON data. We also keep track of the max and min values found in data; these will be used when colorizing the map.
+Finally, we use byCounty to create a new layer based on the JSON data. We can now call setVariable to colorize the data:</p>
+
+<pre><code>var hues = ['#eff3ff','#bdd7e7','#6baed6','#3182bd','#08519c'];
+
+function setVariable(name) {
+    var scale = ranges[name];
+    flLayer.eachLayer(function(layer) {
+        // Decide the color for each state by finding its
+        // place between min &amp; max, and choosing a particular
+        // color as index.
+        var division = Math.floor(
+            (hues.length - 1) *
+            ((layer.feature.properties[name] - scale.min) /
+            (scale.max - scale.min)));
+        // See full path options at
+        // http://leafletjs.com/reference.html#path
+        layer.setStyle({
+            fillColor: hues[division],
+            fillOpacity: 0.8,
+            weight: 0.5
+        });
+    });
+}
+</code></pre>
+
+<p>We start by setting a global series of hues that will be used when colorizing the map. We then use the min and max range for the desired values ('B01002001 - Total:' in our case) to set a specific color for each county (represented in the map as a <code>feature</code> according to the numeric value associated with it.</p>
+</div>
+</div>
+</li>
+</ul>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Cs496howto maintained by <a href="https://github.com/LChristakis">LChristakis</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
